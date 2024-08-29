@@ -1,12 +1,7 @@
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
-//import breeze.linalg._
-//import breeze.plot._
-//import scalaplot._
-//import org.apache.spark.ml.stat._
 import org.apache.spark.sql.expressions.Window
-//import org.apache.spark.ml.feature.VectorAssembler
-//import org.apache.spark.ml.linalg.Matrix
+
 
 object scrip {
   def main(args: Array[String]): Unit = {
@@ -29,7 +24,6 @@ object scrip {
     df.show(5, false)
 
     // 3. Suppression des les lignes où le prix ou le nombre de reviews est nul
-    //df = df.filter(col("price").isNotNull || col("number_of_reviews").isNotNull)
     df = df.na.drop("any", Seq("price", "number_of_reviews"))
     df.show(5, false)
 
@@ -42,14 +36,10 @@ object scrip {
 
     // 5. Calcule du prix moyen des annonces par quartier
     val prixMoyenAnnonParQuartier = df.groupBy("neighbourhood","room_type").agg(avg("price").alias("($) avgPrice"))
-    //avgPrice.show()
      
     // 6. Affichage des quartiers avec le moyen le plus élevé 
     var quartieravecPrixMoyenMax = prixMoyenAnnonParQuartier.orderBy(desc("($) avgPrice"))
     quartieravecPrixMoyenMax.show()
-    //val adsByDistrict = df.groupBy("neighbourhood").agg(avg("price").alias("$PriceByNeigbourhood"))
-    //var maxPriceByDistrict = adsByDistrict.orderBy(desc("$PriceByNeigbourhood"))
-    //maxPriceByDistrict.show()
 
     // 7. Recherche des annonces avec une disponibilité de plus de 300jours par an
     val annonceDispoPlus300 = df.filter(col("availability_365") > 300)
@@ -61,11 +51,11 @@ object scrip {
 
     // 9. Calcule de la repartition des types d'annonces(room_type) par quartier
     var repartTypeAnnParQuart = df.groupBy("neighbourhood", "room_type").count()
-    //println("La repartition des types d'annonces(room_type) par quartier")
     repartTypeAnnParQuart.show()
 
     // 10. Quelle est la moyenne (reviews_per_month) par quartier
     var avgReviewParQuart = df.groupBy("neighbourhood").agg(avg("reviews_per_month").alias("moyen de revue par mois"))
+
     // 11. Affichage du Top 10 des quartiers avec les meilleures notes moyennes
     var top10 = avgReviewParQuart.orderBy(desc("moyen de revue par mois"))
     top10.show(10, false)
@@ -73,20 +63,24 @@ object scrip {
     // 12-13.. Y-a-t-il une correlation entre le prix(price) et la note moyenne des utilisateurs(reviews_per_month)
     // a- Convertissement de "reviews_per_month" en numérique
     df = df.withColumn("reviews_per_month", col("reviews_per_month").cast("double"))
+
     // b- Confirmation de la conversion
     df.printSchema()
+
     // c- Calcule du coefficient de correlation
     val correlation = df.stat.corr("price", "reviews_per_month")
+
     println("########################################################################################")
     println(s"# Le coefficient de correlation entre le prix et la note moyenne est: $correlation    #")
     println("# Il y'a correlation entre le prix et les revues par mois                              #")
     println("########################################################################################")
+
     // 14- Affichage de la distribution des prix sous forme d'histogramme
     // en développement
     
     // 15. Le prix le courant
     var prixPlusCourant = df.groupBy("price").agg(count("*").alias("Frequence")).orderBy(desc("Frequence"))
-    println()
+    println("")
     println("#######################################################################################")
     prixPlusCourant.limit(1).show()
     println("#######################################################################################")
@@ -94,12 +88,14 @@ object scrip {
 
     //16. Calcule le nombre total de reviews par annonce
     val nbreTotalreviewsParAnn = df.groupBy("room_type").agg(count("number_of_reviews").alias("total reviews par annonces"))
+
     //17. Affichage du Top10 des annonces les plus revues
     val top10AnnoncePlusRevu = nbreTotalreviewsParAnn.orderBy(desc("total reviews par annonces"))
     top10AnnoncePlusRevu.show(10, false)
     
     //18-a. Définition une fenêtre de partitionnement par quartier et d'ordre par prix décroissant
     val windowSpec = Window.partitionBy("neighbourhood").orderBy(desc("price"))
+
     //18-b. Calculer le rang des annonces au sein de chaque quartier
     val rankedDf = df.withColumn("rank", rank().over(windowSpec))
     rankedDf.show()
@@ -139,6 +135,7 @@ object scrip {
       .option("inferSchema", "true")
       .option("sep", ";")
       .csv("crime_violence.csv")
+
     // Affichage des premières lignes du DataFrame
     crimeDf.show(5)
 
